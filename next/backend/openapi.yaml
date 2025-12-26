@@ -1,0 +1,643 @@
+openapi: 3.0.0
+info:
+  title: Learning CMS Auth API
+  version: 1.0.0
+  description: Auth and User Management API
+
+servers:
+  - url: http://localhost:5000
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Enter: Bearer <token>. If the UI auto-adds 'Bearer ', paste only the token in the dialog."
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    UserCreate:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    RoleChangeRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, manager, admin]
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+    PasswordReset:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          readOnly: true
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          type: string
+        image:
+          type: string
+          description: Base64 encoded image string
+        imageMime:
+          type: string
+          description: MIME type for image
+      example:
+        id: "64a0f1e8a7e4b5f123456789"
+        userId: "64a0f1d3a7e4b5f123456788"
+        firstName: "Jane"
+        lastName: "Doe"
+        phoneNumber: "+1234567890"
+        address: "123 Main St"
+        image: ""
+        imageMime: "image/png"
+
+    UserInfoCreate:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          type: string
+        image:
+          type: string
+        imageMime:
+          type: string
+      example:
+        firstName: "Jane"
+        lastName: "Doe"
+        phoneNumber: "+1234567890"
+        address: "123 Main St"
+
+    UserInfoUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          type: string
+        image:
+          type: string
+        imageMime:
+          type: string
+      example:
+        firstName: "Jane"
+        lastName: "Smith"
+    ContactInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+        address:
+          type: string
+        children:
+          type: array
+          items:
+            type: string
+      example:
+        phone: "+1234567890"
+        address: "123 Main St"
+        children: ["Alice", "Bob"]
+
+    ContactInfoCreate:
+      type: object
+      properties:
+        phone:
+          type: string
+        address:
+          type: string
+        children:
+          type: array
+          items:
+            type: string
+      example:
+        phone: "+1234567890"
+        address: "123 Main St"
+        children: ["Alice"]
+
+    ContactInfoUpdate:
+      type: object
+      properties:
+        phone:
+          type: string
+        address:
+          type: string
+        children:
+          type: array
+          items:
+            type: string
+      example:
+        phone: "+999999"
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+paths:
+  /api/auth/register:
+    post:
+      security: []
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      security: []
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "400":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/password-reset:
+    post:
+      security: []
+      summary: Request a password reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        "200":
+          description: Password reset requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/password-reset/{token}:
+    post:
+      security: []
+      summary: Reset password using token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordReset'
+      responses:
+        "200":
+          description: Password updated
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users:
+    get:
+      summary: Get all users (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User list returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        "401":
+          description: Unauthorized
+
+  /api/users/me:
+    get:
+      summary: Get profile for logged-in user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        "401":
+          description: Unauthorized
+
+  /api/users/{id}/role:
+    patch:
+      summary: Change user's role (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleChangeRequest'
+      responses:
+        "200":
+          description: Role changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        "400":
+          description: Bad request
+
+  /api/users/{id}:
+    delete:
+      summary: Delete a user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "404":
+          description: User not found
+
+  /api/userinfo/createUserInfo:
+    post:
+      summary: Create user info (user|manager) — do NOT include `userId` (set server-side)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfoCreate'
+      responses:
+        "201":
+          description: User info created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
+
+  /api/userinfo/getAllUserInfo:
+    get:
+      summary: Get all user info (user|manager)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of user info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
+
+  /api/userinfo/getUserInfoById/{id}:
+    get:
+      summary: Get a user info by id (user|manager)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User info returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        "404":
+          description: Not found
+
+  /api/userinfo/updateUserInfo/{id}:
+    put:
+      summary: Update user info by id (user|manager) — do NOT include `userId` in the body
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Authorization
+          required: true
+          description: "Bearer token. Example: 'Bearer <token>'. You can also click 'Authorize' and paste the token there."
+          schema:
+            type: string
+          example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfoUpdate'
+            examples:
+              sample:
+                value:
+                  firstName: "Jane"
+                  lastName: "Smith"
+      responses:
+        "200":
+          description: Updated user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
+
+  /api/userinfo/deleteUserInfo/{id}:
+    delete:
+      summary: Delete user info by id (user|manager)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/userinfo/createProfile:
+    post:
+      summary: Create profile for current user (user|manager) — do NOT include `userId`
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfoCreate'
+      responses:
+        "201":
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo' 
+
+  /api/userinfo/getProfile:
+    get:
+      summary: Get profile for current user (user|manager)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profile returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        "404":
+          description: Profile not found
+
+  /api/userinfo/updateProfile:
+    put:
+      summary: Update profile for current user (user|manager) — do NOT include `userId`
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfoUpdate'
+            examples:
+              sample:
+                value:
+                  firstName: "Jane"
+                  lastName: "Smith"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo' 
+
+  /api/contact/createContact:
+    post:
+      summary: Create contact for current user (user|manager) — do NOT include `userId`
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactInfoCreate'
+      responses:
+        "201":
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactInfo' 
+
+  /api/contact/getContact:
+    get:
+      summary: Get contact for current user (user|manager)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Contact returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactInfo'
+        "404":
+          description: Contact not found
+
+  /api/contact/updateContact:
+    put:
+      summary: Update contact for current user (user|manager) — do NOT include `userId`
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactInfoUpdate'
+            examples:
+              sample:
+                value:
+                  phone: "+1234567890"
+                  address: "New address"
+      responses:
+        "200":
+          description: Updated contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactInfo'
